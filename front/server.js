@@ -52,6 +52,8 @@ const relayer = (cible) => async (req, res) => {
   }
 };
 app.use("/api", relayer(API_URL));
+// L'API n'est pas exposée : c'est par le front qu'on hisse le pavillon.
+app.post("/pavillon", relayer(API_URL));
 app.use("/annexe/api", relayer(ANNEXE_URL));
 
 const port = Number(process.env.PORT || 3000);
