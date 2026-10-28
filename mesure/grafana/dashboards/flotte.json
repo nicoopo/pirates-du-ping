@@ -1,0 +1,51 @@
+{
+  "uid": "flotte",
+  "title": "Flotte : pourquoi un carré s'éteint",
+  "tags": [
+    "flotte"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "1. Trafic : coups encaissés par seconde",
+      "description": "Le service reçoit-il du trafic ? Un carré éteint avec du trafic qui monte, c'est la charge ; avec une courbe à plat, c'est autre chose. Les codes 5xx sont les coups ratés.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum by (service, statut) (rate(flotte_coups_total[1m]))",
+          "legendFormat": "{{service}} {{statut}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}
