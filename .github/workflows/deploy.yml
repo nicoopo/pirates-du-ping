@@ -49,7 +49,8 @@ jobs:
         with:
           context: .
           file: ${{ matrix.service }}/Dockerfile
-          platforms: linux/arm64
+          # amd64 aussi : la prod doit pouvoir changer de machine, pas seulement de Mac
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
