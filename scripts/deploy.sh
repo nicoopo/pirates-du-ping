@@ -16,7 +16,7 @@ esac
 cd "$(dirname "$0")/.."
 
 # Valider sans imprimer la configuration contenant les secrets.
-docker compose --env-file "$DEPLOY_ENV_FILE" -f compose.prod.yml config --quiet
+docker compose --env-file "$DEPLOY_ENV_FILE" -f compose.prod.yml -f compose.mesure.yml config --quiet
 
 ssh -i "$DEPLOY_KEY" -p 2222 -o BatchMode=yes \
   -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" \
@@ -24,6 +24,10 @@ ssh -i "$DEPLOY_KEY" -p 2222 -o BatchMode=yes \
 scp -i "$DEPLOY_KEY" -P 2222 -o BatchMode=yes \
   -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" \
   compose.prod.yml root@localhost:/srv/flotte/compose.prod.yml
+# La mesure (Prometheus, Grafana) tourne à côté de la flotte, sur le même réseau.
+scp -r -i "$DEPLOY_KEY" -P 2222 -o BatchMode=yes \
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" \
+  compose.mesure.yml mesure root@localhost:/srv/flotte/
 scp -i "$DEPLOY_KEY" -P 2222 -o BatchMode=yes \
   -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$DEPLOY_KNOWN_HOSTS" \
   "$DEPLOY_ENV_FILE" root@localhost:/srv/flotte/.env
@@ -43,13 +47,13 @@ ssh -i "$DEPLOY_KEY" -p 2222 -o BatchMode=yes \
       trap 'rm -f /srv/flotte/.registry/config.json' EXIT
     fi
     chmod 600 .env
-    docker compose -f compose.prod.yml config --quiet
+    docker compose -f compose.prod.yml -f compose.mesure.yml config --quiet
     if [ "$1" = always ]; then
-      docker compose -f compose.prod.yml pull
+      docker compose -f compose.prod.yml -f compose.mesure.yml pull
     else
       # Les trois images applicatives doivent déjà être chargées sur la cible.
-      docker compose -f compose.prod.yml pull db
+      docker compose -f compose.prod.yml -f compose.mesure.yml pull db prometheus grafana
     fi
-    docker compose -f compose.prod.yml up -d --no-build --pull never --wait --wait-timeout 30
-    docker compose -f compose.prod.yml ps
+    docker compose -f compose.prod.yml -f compose.mesure.yml up -d --no-build --pull never --wait --wait-timeout 120
+    docker compose -f compose.prod.yml -f compose.mesure.yml ps
 REMOTE

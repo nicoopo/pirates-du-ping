@@ -18,7 +18,8 @@ services:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD manquant dans .env}
+      # shortcut: admin/admin par défaut si GRAFANA_PASSWORD est vide ; port publié sur 127.0.0.1 seulement. À mettre dans PROD_ENV si vm-prod s'ouvre au réseau.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
       # Lecture seule sans compte : l'astreinte garde le dashboard ouvert sans se connecter.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
