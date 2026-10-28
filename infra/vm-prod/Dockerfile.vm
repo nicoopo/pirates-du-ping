@@ -1,0 +1,18 @@
+# Serveur pédagogique : un Docker indépendant, accessible par SSH.
+FROM docker:29-dind
+
+RUN apk add --no-cache openssh \
+    && mkdir -p /root/.ssh /srv/flotte \
+    && chmod 700 /root/.ssh \
+    && passwd -d root \
+    && printf '%s\n' \
+      'PermitRootLogin prohibit-password' \
+      'PasswordAuthentication no' \
+      'KbdInteractiveAuthentication no' \
+      'PubkeyAuthentication yes' > /etc/ssh/sshd_config.d/flotte.conf
+
+COPY infra/vm-prod/entrypoint.sh /usr/local/bin/vm-entrypoint.sh
+RUN chmod +x /usr/local/bin/vm-entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["vm-entrypoint.sh"]

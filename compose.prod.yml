@@ -1,0 +1,77 @@
+name: flotte
+
+x-app: &app
+  restart: unless-stopped
+  init: true
+  environment: &env
+    PORT: "3000"
+    TABLEAU_URL: ${TABLEAU_URL:?TABLEAU_URL requis}
+    GROUPE: ${GROUPE:?GROUPE requis}
+    COULEUR: ${COULEUR:-#e05252}
+    VERSION: ${VERSION:-dev}
+    PAVILLON_FICHIER: /data/pavillon.txt
+  volumes:
+    - pavillon:/data:ro
+  healthcheck:
+    test: [CMD, node, -e, "fetch('http://localhost:3000/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    interval: 10s
+    timeout: 5s
+    retries: 6
+    start_period: 20s
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER requis}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME requis}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    <<: *app
+    image: ${API_IMAGE:?API_IMAGE requis}
+    environment: &db-env
+      <<: *env
+      SERVICE: api
+      DB_HOST: db
+      DB_USER: ${DB_USER:?DB_USER requis}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
+      DB_NAME: ${DB_NAME:?DB_NAME requis}
+    volumes:
+      - pavillon:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  annexe:
+    <<: *app
+    image: ${ANNEXE_IMAGE:?ANNEXE_IMAGE requis}
+    environment:
+      <<: *db-env
+      SERVICE: annexe
+    depends_on:
+      db:
+        condition: service_healthy
+
+  front:
+    <<: *app
+    image: ${FRONT_IMAGE:?FRONT_IMAGE requis}
+    environment:
+      <<: *env
+      SERVICE: front
+      API_URL: http://api:3000
+      ANNEXE_URL: http://annexe:3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres:
+  pavillon:

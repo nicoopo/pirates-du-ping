@@ -1,0 +1,39 @@
+name: Livraison vers vm-prod
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: livraison-vm-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: [self-hosted, macOS, ARM64, flotte-deploy]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Préparer les fichiers et livrer
+        shell: bash
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          set -euo pipefail
+          umask 077
+          delivery_dir=$(mktemp -d "$RUNNER_TEMP/flotte-deploy.XXXXXX")
+          trap 'rm -rf "$delivery_dir"' EXIT
+          export DEPLOY_KEY="$delivery_dir/key"
+          export DEPLOY_KNOWN_HOSTS="$delivery_dir/known_hosts"
+          export DEPLOY_ENV_FILE="$delivery_dir/.env"
+          printf '%s\n' "$SSH_KEY" > "$DEPLOY_KEY"
+          printf '%s\n' "$SSH_HOSTS" > "$DEPLOY_KNOWN_HOSTS"
+          printf '%s\n' "$PROD_ENV" > "$DEPLOY_ENV_FILE"
+          sh scripts/deploy.sh
