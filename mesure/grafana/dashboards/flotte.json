@@ -80,6 +80,88 @@
         "overrides": []
       },
       "options": {}
+    },
+    {
+      "id": 3,
+      "type": "state-timeline",
+      "title": "3. Dépendances (vert = répond)",
+      "description": "Ses dépendances vont-elles bien ? base KO = panne 2 (base coupée). tableau KO alors que le service répond = panne 6 (tableau injoignable). pavillon KO = panne 3. Une ligne « répond au scrape » KO : le process est mort (panne 1, 4 ou 5).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "min by (service, dependance) (flotte_dependance)",
+          "legendFormat": "{{service}} → {{dependance}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        },
+        {
+          "expr": "min by (job) (up)",
+          "legendFormat": "{{job}} répond au scrape",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "KO",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      }
     }
   ]
 }
