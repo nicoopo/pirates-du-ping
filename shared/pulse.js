@@ -12,6 +12,9 @@ const MOI = process.env.URL_INTERNE || "http://localhost:3000";
 
 let totalEncaisse = 0; // depuis le démarrage de ce process, affiché sur le carré
 let aDeclarer = 0; // encaissés depuis le dernier pulse, ce que le tableau attend
+let tableauOk = false; // dernier pulse reçu par le tableau : distingue la panne 6 d'un service mort
+
+export const tableauJoignable = () => tableauOk;
 
 // Le pavillon est relu du disque à chaque pulse : s'il vit dans un volume, il
 // traverse le redéploiement, sinon il disparaît du tableau devant toute la classe.
@@ -66,10 +69,12 @@ async function envoyerPulse() {
     // Les coups déclarés ne sont retirés du compteur local qu'une fois le tableau
     // au courant : si l'appel échoue, ils repartiront dans le pulse suivant.
     aDeclarer -= declares;
+    tableauOk = reponse.ok;
     const ordre = await reponse.json();
     attente = ordre.prochain_pulse_ms || 5000;
     if (ordre.coups_a_encaisser > 0) await encaisser(ordre.coups_a_encaisser);
   } catch (erreur) {
+    tableauOk = false;
     console.error("[pulse] tableau injoignable :", erreur.message);
   }
   setTimeout(envoyerPulse, attente);

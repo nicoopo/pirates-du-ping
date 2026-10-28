@@ -1,0 +1,202 @@
+{
+  "uid": "flotte",
+  "title": "Flotte : pourquoi un carré s'éteint",
+  "tags": [
+    "flotte"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "1. Trafic : coups encaissés par seconde",
+      "description": "Le service reçoit-il du trafic ? Un carré éteint avec du trafic qui monte, c'est la charge ; avec une courbe à plat, c'est autre chose. Les codes 5xx sont les coups ratés.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum by (service, statut) (rate(flotte_coups_total[1m]))",
+          "legendFormat": "{{service}} {{statut}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "2. Latence de /travail (p95)",
+      "description": "Répond-il, et en combien de temps ? La latence qui explose avant l'extinction désigne la saturation ; une extinction sans montée de latence désigne autre chose.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (service, le) (rate(flotte_travail_duree_secondes_bucket[1m])))",
+          "legendFormat": "{{service}} p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "type": "state-timeline",
+      "title": "3. Dépendances (vert = répond)",
+      "description": "Ses dépendances vont-elles bien ? base KO = panne 2 (base coupée). tableau KO alors que le service répond = panne 6 (tableau injoignable). pavillon KO = panne 3. Une ligne « répond au scrape » KO : le process est mort (panne 1, 4 ou 5).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "min by (service, dependance) (flotte_dependance)",
+          "legendFormat": "{{service}} → {{dependance}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        },
+        {
+          "expr": "min by (job) (up)",
+          "legendFormat": "{{job}} répond au scrape",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "KO",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "4. Exemplaires vivants, par version",
+      "description": "La version qui tourne est-elle celle qu'on croit ? Chaque couleur est un couple service/version : pendant une livraison, l'ancienne descend et la nouvelle monte. Un service qui disparaît ici est mort (panne 1, 4) ; une version qui ne change pas après un push = panne 5.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "count by (service, version) (flotte_info)",
+          "legendFormat": "{{service}} {{version}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ]
+}

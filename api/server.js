@@ -3,12 +3,15 @@ import fs from "node:fs";
 import path from "node:path";
 import express from "express";
 import pg from "pg";
+import client from "prom-client";
 import { creerPool, assurerSchema, baseRepond, siTablesDisparues } from "../shared/base.js";
 import { demarrerLePulse } from "../shared/pulse.js";
+import { brancherMetriques } from "../shared/metriques.js";
 
 const pool = creerPool(pg);
 const PAVILLON = process.env.PAVILLON_FICHIER || "/data/pavillon.txt";
 const app = express();
+brancherMetriques(app, client, { base: () => baseRepond(pool) });
 app.use(express.json({ limit: "1kb" }));
 // Un JSON mal formé ou trop gros : un 400 lisible, jamais une trace d'erreur HTML avec nos chemins internes.
 app.use((err, req, res, next) => {
