@@ -46,6 +46,40 @@
         "overrides": []
       },
       "options": {}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "2. Latence de /travail (p95)",
+      "description": "Répond-il, et en combien de temps ? La latence qui explose avant l'extinction désigne la saturation ; une extinction sans montée de latence désigne autre chose.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (service, le) (rate(flotte_travail_duree_secondes_bucket[1m])))",
+          "legendFormat": "{{service}} p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {}
     }
   ]
 }
