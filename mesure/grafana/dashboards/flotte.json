@@ -162,6 +162,41 @@
           "showLegend": false
         }
       }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "4. Exemplaires vivants, par version",
+      "description": "La version qui tourne est-elle celle qu'on croit ? Chaque couleur est un couple service/version : pendant une livraison, l'ancienne descend et la nouvelle monte. Un service qui disparaît ici est mort (panne 1, 4) ; une version qui ne change pas après un push = panne 5.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "targets": [
+        {
+          "expr": "count by (service, version) (flotte_info)",
+          "legendFormat": "{{service}} {{version}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {}
     }
   ]
 }
