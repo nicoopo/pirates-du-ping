@@ -8,6 +8,13 @@ const API_URL = process.env.API_URL || "http://api:3000";
 const ANNEXE_URL = process.env.ANNEXE_URL || "http://annexe:3000";
 const app = express();
 app.use(express.json({ limit: "1kb" }));
+// Un JSON mal formé ou trop gros : un 400 lisible, jamais une trace d'erreur HTML avec nos chemins internes.
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed" || err.type === "entity.too.large") {
+    return res.status(400).json({ erreur: "corps de requête invalide (JSON attendu, 1 ko max)" });
+  }
+  next(err);
+});
 app.use(express.static(fileURLToPath(new URL("./public", import.meta.url))));
 
 // Le front répond toujours, même si ses dépendances sont tombées : c'est la dégradation gracieuse.
@@ -45,6 +52,8 @@ const relayer = (cible) => async (req, res) => {
   }
 };
 app.use("/api", relayer(API_URL));
+// L'API n'est pas exposée : c'est par le front qu'on hisse le pavillon.
+app.post("/pavillon", relayer(API_URL));
 app.use("/annexe/api", relayer(ANNEXE_URL));
 
 const port = Number(process.env.PORT || 3000);

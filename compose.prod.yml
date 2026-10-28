@@ -41,13 +41,15 @@ services:
       DB_HOST: db
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
       DB_NAME: ${DB_NAME}
       PORT: 3000
     volumes:
+      # Le pavillon vit dans un volume nommé : il survit au remplacement de l'API à chaque déploiement.
       - pavillon_data:/data
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   annexe:
     build:
@@ -66,23 +68,30 @@ services:
       DB_HOST: db
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
       DB_NAME: ${DB_NAME}
       PORT: 3000
     volumes:
       - pavillon_data:/data:ro
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    # Aucun port publié : seule la flotte, sur le réseau interne, joint la base.
 
 volumes:
   db_data:

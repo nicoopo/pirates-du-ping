@@ -10,6 +10,13 @@ const pool = creerPool(pg);
 const PAVILLON = process.env.PAVILLON_FICHIER || "/data/pavillon.txt";
 const app = express();
 app.use(express.json({ limit: "1kb" }));
+// Un JSON mal formé ou trop gros : un 400 lisible, jamais une trace d'erreur HTML avec nos chemins internes.
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed" || err.type === "entity.too.large") {
+    return res.status(400).json({ erreur: "corps de requête invalide (JSON attendu, 1 ko max)" });
+  }
+  next(err);
+});
 
 // Une base coupée donne un 503 exploitable, jamais un plantage ni une requête pendue.
 const avecBase = (handler) => async (req, res) => {
