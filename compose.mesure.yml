@@ -18,11 +18,15 @@ services:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
     environment:
-      # shortcut: admin/admin par défaut si GRAFANA_PASSWORD est vide ; port publié sur 127.0.0.1 seulement. À mettre dans PROD_ENV si vm-prod s'ouvre au réseau.
+      # admin/admin par défaut si GRAFANA_PASSWORD est vide : inutilisable, login et API désactivés ci-dessous.
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
       # Lecture seule sans compte : l'astreinte garde le dashboard ouvert sans se connecter.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # Grafana est joignable par toute la salle : aucune connexion possible, ni formulaire ni API.
+      # Le dashboard vient du repo, on le modifie par une PR, pas dans le navigateur.
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_BASIC_ENABLED: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/flotte.json
     volumes:
       - ./mesure/grafana/provisioning:/etc/grafana/provisioning:ro
