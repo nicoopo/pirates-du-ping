@@ -7,3 +7,6 @@ k8s/*-secret.yaml
 node_modules/
 .idea/
 .vscode/
+.DS_Store
+known_hosts
+actions-runner/

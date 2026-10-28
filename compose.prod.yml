@@ -1,77 +1,128 @@
 name: flotte
 
-x-app: &app
-  restart: unless-stopped
-  init: true
-  environment: &env
-    PORT: "3000"
-    TABLEAU_URL: ${TABLEAU_URL:?TABLEAU_URL requis}
-    GROUPE: ${GROUPE:?GROUPE requis}
-    COULEUR: ${COULEUR:-#e05252}
-    VERSION: ${VERSION:-dev}
-    PAVILLON_FICHIER: /data/pavillon.txt
-  volumes:
-    - pavillon:/data:ro
-  healthcheck:
-    test: [CMD, node, -e, "fetch('http://localhost:3000/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-    interval: 10s
-    timeout: 5s
-    retries: 6
-    start_period: 20s
+x-health: &health
+  test: [CMD, node, -e, "fetch('http://localhost:3000/sante').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  interval: 10s
+  timeout: 5s
+  retries: 6
+  start_period: 20s
 
 services:
-  db:
-    image: postgres:17-alpine
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    image: ${FRONT_IMAGE:-${REGISTRY:-ghcr.io/a-renseigner}/${GROUPE}-front:${TAG:-dev}}
     restart: unless-stopped
+    init: true
+    healthcheck: *health
     environment:
-      POSTGRES_USER: ${DB_USER:?DB_USER requis}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
-      POSTGRES_DB: ${DB_NAME:?DB_NAME requis}
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
+      SERVICE: front
+      VERSION: ${VERSION:-${TAG:-dev}}
+      URL_INTERNE: http://front:3000
+      API_URL: http://api:3000
+      ANNEXE_URL: http://annexe:3000
+      PAVILLON_FICHIER: /data/pavillon.txt
+      PORT: 3000
+    ports:
+      - "3000:3000"
     volumes:
-      - postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
-      interval: 5s
-      timeout: 3s
-      retries: 12
+      - pavillon_data:/data:ro
+    depends_on:
+      - api
+      - annexe
 
   api:
-    <<: *app
-    image: ${API_IMAGE:?API_IMAGE requis}
-    environment: &db-env
-      <<: *env
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: ${API_IMAGE:-${REGISTRY:-ghcr.io/a-renseigner}/${GROUPE}-api:${TAG:-dev}}
+    restart: unless-stopped
+    init: true
+    healthcheck: *health
+    environment:
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
       SERVICE: api
+      VERSION: ${VERSION:-${TAG:-dev}}
+      URL_INTERNE: http://api:3000
+      PAVILLON_FICHIER: /data/pavillon.txt
       DB_HOST: db
-      DB_USER: ${DB_USER:?DB_USER requis}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
-      DB_NAME: ${DB_NAME:?DB_NAME requis}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
     volumes:
-      - pavillon:/data
+      # Le pavillon vit dans un volume nommé : il survit au remplacement de l'API à chaque déploiement.
+      - pavillon_data:/data
     depends_on:
+      pavillon-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
 
   annexe:
-    <<: *app
-    image: ${ANNEXE_IMAGE:?ANNEXE_IMAGE requis}
+    build:
+      context: .
+      dockerfile: annexe/Dockerfile
+    image: ${ANNEXE_IMAGE:-${REGISTRY:-ghcr.io/a-renseigner}/${GROUPE}-annexe:${TAG:-dev}}
+    restart: unless-stopped
+    init: true
+    healthcheck: *health
     environment:
-      <<: *db-env
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
       SERVICE: annexe
+      VERSION: ${VERSION:-${TAG:-dev}}
+      URL_INTERNE: http://annexe:3000
+      PAVILLON_FICHIER: /data/pavillon.txt
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
+    volumes:
+      - pavillon_data:/data:ro
     depends_on:
+      pavillon-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
 
-  front:
-    <<: *app
-    image: ${FRONT_IMAGE:?FRONT_IMAGE requis}
+  # Le volume de test existant appartient à root ; les images utilisent node.
+  pavillon-init:
+    image: ${API_IMAGE:-${REGISTRY:-ghcr.io/a-renseigner}/${GROUPE}-api:${TAG:-dev}}
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chown -R node:node /data"]
+    restart: "no"
+    volumes:
+      - pavillon_data:/data
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      <<: *env
-      SERVICE: front
-      API_URL: http://api:3000
-      ANNEXE_URL: http://annexe:3000
-    ports:
-      - "3000:3000"
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    # Aucun port publié : seule la flotte, sur le réseau interne, joint la base.
 
 volumes:
-  postgres:
-  pavillon:
+  db_data:
+    name: flotte_postgres
+  pavillon_data:
+    name: flotte_pavillon
