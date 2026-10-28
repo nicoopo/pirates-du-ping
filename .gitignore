@@ -1,0 +1,9 @@
+# Secrets : jamais dans le repo, du premier commit au dernier
+.env
+deploy_key
+*.pem
+k8s/*-secret.yaml
+
+node_modules/
+.idea/
+.vscode/
