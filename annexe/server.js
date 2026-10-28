@@ -2,11 +2,14 @@
 // Il ne fait que lire : c'est un travail différent de l'API, qui enregistre les buzz.
 import express from "express";
 import pg from "pg";
+import client from "prom-client";
 import { creerPool, assurerSchema, baseRepond, siTablesDisparues } from "../shared/base.js";
 import { demarrerLePulse } from "../shared/pulse.js";
+import { brancherMetriques } from "../shared/metriques.js";
 
 const pool = creerPool(pg);
 const app = express();
+brancherMetriques(app, client, { base: () => baseRepond(pool) });
 
 const avecBase = (handler) => async (req, res) => {
   try {
