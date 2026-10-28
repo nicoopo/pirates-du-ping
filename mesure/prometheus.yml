@@ -1,0 +1,14 @@
+# Une cible par exemplaire : la découverte DNS suit le --scale, une liste statique n'en verrait qu'un.
+global:
+  scrape_interval: 5s # le carré s'éteint en 8 s, la mesure doit suivre ce rythme
+
+scrape_configs:
+  - job_name: front
+    dns_sd_configs:
+      - { names: [front], type: A, port: 3000, refresh_interval: 5s }
+  - job_name: api
+    dns_sd_configs:
+      - { names: [api], type: A, port: 3000, refresh_interval: 5s }
+  - job_name: annexe
+    dns_sd_configs:
+      - { names: [annexe], type: A, port: 3000, refresh_interval: 5s }

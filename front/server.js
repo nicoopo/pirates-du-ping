@@ -2,11 +2,14 @@
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import client from "prom-client";
+import { brancherMetriques } from "../shared/metriques.js";
 import { demarrerLePulse } from "../shared/pulse.js";
 
 const API_URL = process.env.API_URL || "http://api:3000";
 const ANNEXE_URL = process.env.ANNEXE_URL || "http://annexe:3000";
 const app = express();
+brancherMetriques(app, client, { api: () => joignable(API_URL), annexe: () => joignable(ANNEXE_URL) });
 app.use(express.json({ limit: "1kb" }));
 // Un JSON mal formé ou trop gros : un 400 lisible, jamais une trace d'erreur HTML avec nos chemins internes.
 app.use((err, req, res, next) => {
