@@ -1,0 +1,73 @@
+# compose.prod.yml : la flotte telle qu'elle tourne sur la machine cible
+# Un bloc par service, chacun le sien : on n'écrit que dans son propre bloc.
+services:
+  front:
+    image: ${REGISTRY}/${GROUPE}-front:${TAG}
+    restart: unless-stopped
+    environment:
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
+      SERVICE: front
+      VERSION: ${TAG}
+      URL_INTERNE: http://front:3000
+      API_URL: http://api:3000
+      ANNEXE_URL: http://annexe:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  api:
+    image: ${REGISTRY}/${GROUPE}-api:${TAG}
+    # TODO (images / livraison) : SERVICE: api, URL_INTERNE, variables du pulse
+    restart: unless-stopped
+    environment:
+      # --- bloc État : connexion à la base et pavillon ---
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      DB_NAME: ${DB_NAME}
+      PAVILLON_FICHIER: /data/pavillon.txt
+    volumes:
+      # Le pavillon vit dans un volume nommé, pas dans le conteneur :
+      # il survit au remplacement de l'API à chaque déploiement.
+      - pavillon:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  annexe:
+    image: ${REGISTRY}/${GROUPE}-annexe:${TAG}
+    # TODO (images / livraison) : SERVICE: annexe, URL_INTERNE, variables du pulse
+    restart: unless-stopped
+    environment:
+      # --- bloc État : connexion à la base ---
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      DB_NAME: ${DB_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- bloc État : la base, la seule brique qui n'a pas de carré au tableau ---
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    # Aucun port publié : seule la flotte, sur le réseau interne, joint la base.
+
+volumes:
+  donnees:
+  pavillon:
