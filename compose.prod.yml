@@ -1,0 +1,89 @@
+services:
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    image: ${REGISTRY}/${GROUPE}-front:${TAG}
+    restart: unless-stopped
+    environment:
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
+      SERVICE: front
+      VERSION: ${TAG}
+      URL_INTERNE: http://front:3000
+      API_URL: http://api:3000
+      ANNEXE_URL: http://annexe:3000
+      PAVILLON_FICHIER: ${PAVILLON_FICHIER}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - pavillon_data:/data:ro
+    depends_on:
+      - api
+      - annexe
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: ${REGISTRY}/${GROUPE}-api:${TAG}
+    restart: unless-stopped
+    environment:
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
+      SERVICE: api
+      VERSION: ${TAG}
+      URL_INTERNE: http://api:3000
+      PAVILLON_FICHIER: ${PAVILLON_FICHIER}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
+    volumes:
+      - pavillon_data:/data
+    depends_on:
+      - db
+
+  annexe:
+    build:
+      context: .
+      dockerfile: annexe/Dockerfile
+    image: ${REGISTRY}/${GROUPE}-annexe:${TAG}
+    restart: unless-stopped
+    environment:
+      TABLEAU_URL: ${TABLEAU_URL}
+      GROUPE: ${GROUPE}
+      COULEUR: ${COULEUR}
+      SERVICE: annexe
+      VERSION: ${TAG}
+      URL_INTERNE: http://annexe:3000
+      PAVILLON_FICHIER: ${PAVILLON_FICHIER}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: 3000
+    volumes:
+      - pavillon_data:/data:ro
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
+  pavillon_data:

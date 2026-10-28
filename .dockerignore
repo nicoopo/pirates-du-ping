@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+node_modules
+**/node_modules
+.env
+deploy_key
+*.pem
+*.log
+README.md
+resume_role_images_projet_groupe.md
+partie5_projet_de_groupe.pdf
